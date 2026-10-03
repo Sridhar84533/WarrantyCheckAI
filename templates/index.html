@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WarrantyCheck AI - Intelligent Warranty Support</title>
+    <meta name="description" content="Check warranty status, calculate coverage periods, upload invoices, and get instant answers from Microsoft Foundry AI.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="brand">
+                <div class="brand-icon">W</div>
+                <div class="brand-info">
+                    <span class="brand-name">WarrantyCheck AI</span>
+                    <span class="brand-tagline">Microsoft Foundry AI Assistant</span>
+                </div>
+            </a>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                Foundry Agent Active
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <span class="hero-pill">⚡ Powered by Microsoft Foundry &amp; GPT-5-mini</span>
+            <h1>Intelligent Warranty Management</h1>
+            <p>
+                Calculate warranty coverage, analyze purchase receipts and invoices with AI,
+                and resolve claims and warranty queries instantly.
+            </p>
+        </section>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs" role="tablist">
+            <button id="warrantyTab" class="tab active" onclick="switchTab('warranty')" role="tab" aria-selected="true">
+                <span class="tab-icon">⏱️</span>
+                <span>Warranty Calculator</span>
+            </button>
+            <button id="documentTab" class="tab" onclick="switchTab('document')" role="tab" aria-selected="false">
+                <span class="tab-icon">📄</span>
+                <span>Document Upload &amp; Analysis</span>
+            </button>
+            <button id="chatTab" class="tab" onclick="switchTab('chat')" role="tab" aria-selected="false">
+                <span class="tab-icon">💬</span>
+                <span>AI Warranty Assistant</span>
+            </button>
+        </div>
+
+        <!-- ====================================================
+             TAB 1: WARRANTY CALCULATOR
+             ==================================================== -->
+        <section id="warrantyPanel" class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Check Product Warranty</h2>
+                <p class="panel-description">
+                    Enter product and purchase details to calculate remaining warranty days and expiration date deterministically.
+                </p>
+            </div>
+
+            <!-- Autofill Notification -->
+            <div id="autofillNotice" class="alert alert-success hidden">
+                ✓ <strong>Autofill Successful:</strong> Warranty form has been populated with details extracted by AI. You can review or edit any field before submitting.
+            </div>
+
+            <!-- Warranty Form -->
+            <form id="warrantyForm" onsubmit="handleCheckWarranty(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="productName">Product Name <span class="required">*</span></label>
+                        <input type="text" id="productName" class="form-control" placeholder="e.g. ThinkPad X1 Carbon" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="brand">Brand</label>
+                        <input type="text" id="brand" class="form-control" placeholder="e.g. Lenovo">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modelNumber">Model Number</label>
+                        <input type="text" id="modelNumber" class="form-control" placeholder="e.g. 20XW004JUS">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="serialNumber">Serial Number / Service Tag</label>
+                        <input type="text" id="serialNumber" class="form-control" placeholder="e.g. PF-3ABC123">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="purchaseDate">Purchase Date <span class="required">*</span></label>
+                        <input type="date" id="purchaseDate" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="warrantyYears">Warranty Duration <span class="required">*</span></label>
+                        <select id="warrantyYears" class="form-control" required>
+                            <option value="">Select duration...</option>
+                            <option value="1">1 Year</option>
+                            <option value="2">2 Years</option>
+                            <option value="3">3 Years</option>
+                            <option value="4">4 Years</option>
+                            <option value="5">5 Years</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" id="checkWarrantyBtn" class="btn btn-primary btn-block">
+                    <span>Check Warranty Coverage</span>
+                </button>
+            </form>
+
+            <!-- Error Box -->
+            <div id="warrantyError" class="alert alert-danger hidden"></div>
+
+            <!-- Warranty Result Card -->
+            <div id="warrantyResult" class="result-card hidden">
+                <div class="result-header">
+                    <div>
+                        <h3 style="font-size: 19px; font-weight: 700; color: var(--text-main);">Warranty Calculation Report</h3>
+                        <p style="font-size: 13px; color: var(--text-light); margin-top: 2px;">Verified against current system calendar</p>
+                    </div>
+                    <span id="resultStatusBadge" class="result-badge valid">Within Warranty</span>
+                </div>
+
+                <div class="result-grid">
+                    <div class="result-item">
+                        <div class="result-label">Product Name</div>
+                        <div id="resultProduct" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Brand &amp; Model</div>
+                        <div class="result-value">
+                            <span id="resultBrand">—</span> &bull; <span id="resultModel">—</span>
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Serial Number</div>
+                        <div id="resultSerial" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Purchase Date</div>
+                        <div id="resultPurchaseDate" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Warranty Duration</div>
+                        <div id="resultDuration" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Expiration Date</div>
+                        <div id="resultExpiry" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Calculation Date</div>
+                        <div id="resultCheckedOn" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Days Remaining</div>
+                        <div id="resultDaysRemaining" class="result-value" style="color: var(--primary);">—</div>
+                    </div>
+                </div>
+
+                <div id="resultBanner" class="result-banner banner-valid"></div>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             TAB 2: DOCUMENT UPLOAD & AI ANALYSIS
+             ==================================================== -->
+        <section id="documentPanel" class="panel hidden">
+            <div class="panel-header">
+                <h2 class="panel-title">AI Document Analysis</h2>
+                <p class="panel-description">
+                    Upload an invoice, receipt, or warranty certificate. WarrantyCheck AI will extract product details and allow one-click form autofill.
+                </p>
+            </div>
+
+            <!-- Upload Dropzone -->
+            <div id="uploadDropzone" class="upload-dropzone" onclick="document.getElementById('documentInput').click()">
+                <div class="upload-icon">📂</div>
+                <h3>Drag &amp; drop warranty invoice or receipt</h3>
+                <p>Supported formats: PDF, DOCX, JPG, JPEG, PNG (Max 10 MB)</p>
+                <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); document.getElementById('documentInput').click();">
+                    Browse File
+                </button>
+                <input type="file" id="documentInput" class="file-input" accept=".pdf,.docx,.jpg,.jpeg,.png">
+            </div>
+
+            <!-- Selected File Card -->
+            <div id="selectedFileCard" class="selected-file-card hidden">
+                <div class="file-meta">
+                    <span class="file-icon">📄</span>
+                    <div>
+                        <div id="selectedFileName" class="file-name">—</div>
+                        <div id="selectedFileSize" class="file-size">—</div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="clearSelectedDocument()" style="padding: 6px 12px; font-size: 13px;">
+                    Remove
+                </button>
+            </div>
+
+            <!-- Upload & Analyze Button -->
+            <div class="upload-actions">
+                <button type="button" id="uploadBtn" class="btn btn-primary" onclick="handleUploadDocument()" disabled style="flex: 1;">
+                    Upload &amp; Analyze with AI
+                </button>
+            </div>
+
+            <!-- Status Alerts -->
+            <div id="uploadError" class="alert alert-danger hidden"></div>
+            <div id="uploadSuccess" class="alert alert-success hidden"></div>
+
+            <!-- Analysis Results Section -->
+            <div id="documentAnalysisSection" class="analysis-container hidden">
+                <div class="analysis-header">
+                    <div>
+                        <h3 style="font-size: 19px; font-weight: 700; color: var(--text-main);">Extracted Warranty Details</h3>
+                        <p style="font-size: 13px; color: var(--text-light);">Analyzed directly by WarrantyCheckAI Microsoft Foundry Agent</p>
+                    </div>
+                    <button type="button" class="btn btn-success" onclick="applyExtractedToForm()">
+                        <span>📋 Use Extracted Information</span>
+                    </button>
+                </div>
+
+                <!-- Document Summary -->
+                <div class="analysis-summary-box">
+                    <strong>Document Summary:</strong>
+                    <div id="docSummary" style="margin-top: 4px;">—</div>
+                </div>
+
+                <!-- Fields Grid -->
+                <div class="analysis-fields-grid">
+                    <div class="result-item">
+                        <div class="result-label">Product Name</div>
+                        <div id="docProduct" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Brand</div>
+                        <div id="docBrand" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Model Number</div>
+                        <div id="docModel" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Serial Number</div>
+                        <div id="docSerial" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Purchase Date</div>
+                        <div id="docPurchaseDate" class="result-value">—</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Warranty Duration</div>
+                        <div id="docWarrantyYears" class="result-value">—</div>
+                    </div>
+                    <div class="result-item" style="grid-column: 1 / -1;">
+                        <div class="result-label">Invoice / Receipt Number</div>
+                        <div id="docInvoiceNumber" class="result-value">—</div>
+                    </div>
+                </div>
+
+                <!-- Missing Information -->
+                <div style="margin-bottom: 20px;">
+                    <div class="result-label" style="margin-bottom: 6px;">Field Completeness Status</div>
+                    <div id="docMissingInfo"></div>
+                </div>
+
+                <!-- Raw Extracted Text -->
+                <details style="margin-top: 15px;">
+                    <summary style="font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer;">
+                        View Raw Extracted Text Preview
+                    </summary>
+                    <pre id="docRawText" class="extracted-text-preview"></pre>
+                </details>
+            </div>
+        </section>
+
+        <!-- ====================================================
+             TAB 3: AI WARRANTY ASSISTANT (CHAT)
+             ==================================================== -->
+        <section id="chatPanel" class="panel hidden">
+            <div class="panel-header">
+                <h2 class="panel-title">WarrantyCheck AI Assistant</h2>
+                <p class="panel-description">
+                    Ask questions about warranty coverage, claim procedures, consumer rights, exclusions, and troubleshooting.
+                </p>
+            </div>
+
+            <div class="chat-box">
+                <div id="chatMessages" class="chat-messages">
+                    <div class="chat-bubble assistant">
+                        <div class="chat-avatar">AI</div>
+                        <div class="chat-content">Hello! I am WarrantyCheck AI, your Microsoft Foundry intelligent warranty assistant. 
+
+How can I help you today? You can ask me how to check warranty coverage, how to submit a manufacturer claim, or what evidence you need for an invoice dispute.</div>
+                    </div>
+                </div>
+
+                <!-- Quick Prompt Pills -->
+                <div class="chat-quick-prompts">
+                    <span class="prompt-pill" onclick="sendQuickPrompt('How do I submit a warranty claim?')">How to claim warranty?</span>
+                    <span class="prompt-pill" onclick="sendQuickPrompt('What documents do I need for proof of purchase?')">Required documents</span>
+                    <span class="prompt-pill" onclick="sendQuickPrompt('Are accidental drops and liquid damage usually covered?')">Accidental damage coverage</span>
+                    <span class="prompt-pill" onclick="sendQuickPrompt('What should I do if my warranty expired last week?')">Expired warranty help</span>
+                </div>
+
+                <!-- Chat Input Bar -->
+                <div class="chat-input-bar">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="Type your warranty question here..." onkeydown="handleChatKey(event)">
+                    <button type="button" id="chatSendBtn" class="btn btn-primary" onclick="sendChatMessage()">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 WarrantyCheck AI &bull; Powered by Microsoft Foundry &bull; All calculations deterministic &bull; Secure Azure Authentication</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
