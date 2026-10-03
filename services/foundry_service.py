@@ -15,18 +15,27 @@ if not FOUNDRY_PROJECT_ENDPOINT:
 
 # Use Service Principal (ClientSecretCredential) when env vars are set (e.g. Render),
 # otherwise fall back to DefaultAzureCredential for local development (az login).
-_tenant_id = os.environ.get("AZURE_TENANT_ID")
-_client_id = os.environ.get("AZURE_CLIENT_ID")
-_client_secret = os.environ.get("AZURE_CLIENT_SECRET")
+_tenant_id = (os.environ.get("AZURE_TENANT_ID") or "").strip()
+_client_id = (os.environ.get("AZURE_CLIENT_ID") or "").strip()
+_client_secret = (os.environ.get("AZURE_CLIENT_SECRET") or "").strip()
 
 if _tenant_id and _client_id and _client_secret:
-    credential = ClientSecretCredential(
-        tenant_id=_tenant_id,
-        client_id=_client_id,
-        client_secret=_client_secret,
-    )
+    print(f"[AUTH] Using ClientSecretCredential | tenant_id='{_tenant_id}' len={len(_tenant_id)}")
+    try:
+        credential = ClientSecretCredential(
+            tenant_id=_tenant_id,
+            client_id=_client_id,
+            client_secret=_client_secret,
+        )
+    except ValueError as e:
+        raise ValueError(
+            f"Azure credential error: {e}\n"
+            f"  AZURE_TENANT_ID='{_tenant_id}' (len={len(_tenant_id)})\n"
+            f"  AZURE_CLIENT_ID='{_client_id}' (len={len(_client_id)})\n"
+            f"  AZURE_CLIENT_SECRET length={len(_client_secret)}"
+        ) from e
 else:
-    # Local development fallback (requires `az login`)
+    print("[AUTH] Azure SP env vars not set — falling back to DefaultAzureCredential")
     credential = DefaultAzureCredential()
 
 project_client = AIProjectClient(
