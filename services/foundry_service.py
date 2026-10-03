@@ -1,6 +1,7 @@
 import json
+import os
 import re
-from azure.identity import DefaultAzureCredential
+from azure.identity import ClientSecretCredential, DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 
 from config.config import (
@@ -12,8 +13,21 @@ from config.config import (
 if not FOUNDRY_PROJECT_ENDPOINT:
     raise RuntimeError("FOUNDRY_PROJECT_ENDPOINT is missing from .env")
 
-# Microsoft Foundry Client using DefaultAzureCredential (authenticated via az login)
-credential = DefaultAzureCredential()
+# Use Service Principal (ClientSecretCredential) when env vars are set (e.g. Render),
+# otherwise fall back to DefaultAzureCredential for local development (az login).
+_tenant_id = os.environ.get("AZURE_TENANT_ID")
+_client_id = os.environ.get("AZURE_CLIENT_ID")
+_client_secret = os.environ.get("AZURE_CLIENT_SECRET")
+
+if _tenant_id and _client_id and _client_secret:
+    credential = ClientSecretCredential(
+        tenant_id=_tenant_id,
+        client_id=_client_id,
+        client_secret=_client_secret,
+    )
+else:
+    # Local development fallback (requires `az login`)
+    credential = DefaultAzureCredential()
 
 project_client = AIProjectClient(
     endpoint=FOUNDRY_PROJECT_ENDPOINT,
