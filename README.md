@@ -202,6 +202,6 @@ python-dateutil
 
 <div align="center">
 
-Made with ❤️ using Microsoft Foundry, Flask & Python
+Made with  using Microsoft Foundry, Flask & Python
 
 </div>
