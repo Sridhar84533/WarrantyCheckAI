@@ -77,18 +77,31 @@ Be professional, clear, concise, and helpful. Keep responses direct and structur
 
 def ask_agent(prompt: str, max_tokens: int = 600) -> str:
     """Send a prompt to the Microsoft Foundry WarrantyCheckAI agent and return output text."""
-    response = openai_client.responses.create(
-        input=prompt,
-        max_output_tokens=max_tokens,
-        extra_body={
-            "agent_reference": {
-                "name": FOUNDRY_AGENT_NAME,
-                "version": FOUNDRY_AGENT_VERSION,
-                "type": "agent_reference"
+    try:
+        response = openai_client.responses.create(
+            input=prompt,
+            max_output_tokens=max_tokens,
+            extra_body={
+                "agent_reference": {
+                    "name": FOUNDRY_AGENT_NAME,
+                    "version": FOUNDRY_AGENT_VERSION,
+                    "type": "agent_reference"
+                }
             }
-        }
-    )
-    return response.output_text or ""
+        )
+        return response.output_text or ""
+    except Exception as e:
+        # Log full error details to Render logs
+        err_body = getattr(e, "response", None)
+        if err_body is not None:
+            try:
+                print(f"[AGENT ERROR] Status: {err_body.status_code}")
+                print(f"[AGENT ERROR] Body: {err_body.text}")
+            except Exception:
+                pass
+        print(f"[AGENT ERROR] Full exception: {repr(e)}")
+        raise
+
 
 
 def chat_with_agent(message: str) -> str:
