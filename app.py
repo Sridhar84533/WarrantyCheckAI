@@ -17,10 +17,12 @@ from routes.chat_routes import chat_bp
 from routes.warranty_routes import warranty_bp
 from routes.document_routes import document_bp
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 app = Flask(
     __name__,
-    template_folder="templates",
-    static_folder="static",
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static"),
     static_url_path="/static"
 )
 
@@ -28,8 +30,11 @@ app.secret_key = FLASK_SECRET_KEY
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-# Ensure uploads folder exists
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Ensure uploads folder exists safely
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+except OSError:
+    pass
 
 # Register feature blueprints
 app.register_blueprint(chat_bp)

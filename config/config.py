@@ -19,7 +19,7 @@ MAX_UPLOAD_SIZE = int(
 
 UPLOAD_FOLDER = os.getenv(
     "UPLOAD_FOLDER",
-    "uploads"
+    "/tmp/uploads" if os.getenv("VERCEL") else "uploads"
 )
 
 
