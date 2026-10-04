@@ -119,6 +119,10 @@ def _extract_json_payload(raw_text: str) -> dict:
     """Safely extracts and parses the JSON structure from agent response."""
     text = raw_text.strip()
 
+    # Strip surrounding single-quotes that the agent sometimes wraps around JSON
+    if text.startswith("'") and text.endswith("'"):
+        text = text[1:-1].strip()
+
     # Remove Markdown fences if present
     if "```json" in text:
         match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
@@ -137,8 +141,8 @@ def _extract_json_payload(raw_text: str) -> dict:
     except json.JSONDecodeError:
         pass
 
-    # Fallback regex search for outer JSON object
-    match = re.search(r"(\{.*\})", text, re.DOTALL)
+    # Fallback: find first { ... } block in text
+    match = re.search(r"(\{[\s\S]*\})", text)
     if match:
         try:
             data = json.loads(match.group(1).strip())
@@ -165,37 +169,18 @@ def _extract_json_payload(raw_text: str) -> dict:
 
 def analyze_warranty_document(document_text: str) -> dict:
     """Asks WarrantyCheckAI agent to extract warranty parameters into rigid JSON."""
-    prompt = f"""You are analyzing a warranty or purchase document for WarrantyCheck AI.
-
-Extract ONLY information that is explicitly present in the document.
-
-Return ONLY valid JSON using exactly this structure:
-{{
-  "product_name": "",
-  "brand": "",
-  "model_number": "",
-  "serial_number": "",
-  "purchase_date": "",
-  "warranty_years": "",
-  "invoice_number": "",
-  "missing_information": [],
-  "document_summary": ""
-}}
-
-Rules:
-- Never invent information.
-- Only use information explicitly present in the document.
-- Empty string if a field is not found.
-- Use YYYY-MM-DD for purchase_date when confidently identifiable.
-- warranty_years must be numeric when available (e.g. "1", "2", "3").
-- missing_information must be an array of strings listing key missing items (e.g. ["serial_number", "purchase_date"]).
-- document_summary must summarize only the document.
-- Return valid JSON only. Do not add markdown backticks or commentary.
-
-DOCUMENT:
-{document_text}
-"""
-    result = ask_agent(prompt, max_tokens=500)
+    prompt = (
+        "Extract warranty and purchase details from the following document and return ONLY valid JSON "
+        "with exactly these fields: "
+        '{"product_name":"","brand":"","model_number":"","serial_number":"","purchase_date":"",'
+        '"warranty_years":"","invoice_number":"","missing_information":[],"document_summary":""}. '
+        "Rules: (1) Only use information explicitly in the document. (2) Empty string for missing fields. "
+        "(3) purchase_date in YYYY-MM-DD format. (4) warranty_years as a numeric string like '1' or '2'. "
+        "(5) missing_information is an array of field names that are absent. "
+        "(6) Return RAW JSON only — no markdown fences, no backticks, no commentary. "
+        f"DOCUMENT:\n{document_text}"
+    )
+    result = ask_agent(prompt, max_tokens=1000)
     data = _extract_json_payload(result)
 
     # Standardize types and missing fields
