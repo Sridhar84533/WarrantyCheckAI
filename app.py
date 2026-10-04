@@ -43,8 +43,28 @@ app.register_blueprint(document_bp)
 
 
 @app.get("/")
-@app.get("/api/index")
 def home():
+    return render_template("index.html")
+
+
+@app.route("/api/index", methods=["GET", "POST"])
+def api_index():
+    if request.method == "POST":
+        data = request.get_json(silent=True) or (request.form.to_dict() if request.form else {})
+        if "document" in request.files:
+            from routes.document_routes import upload_document
+            return upload_document()
+        if "purchase_date" in data or "warranty_years" in data or "product_name" in data:
+            from routes.warranty_routes import check_warranty
+            return check_warranty()
+        if "message" in data:
+            from routes.chat_routes import chat
+            return chat()
+        return jsonify({
+            "success": False,
+            "error": "No matching handler found for request payload."
+        }), 400
+
     return render_template("index.html")
 
 

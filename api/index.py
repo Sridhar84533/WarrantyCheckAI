@@ -13,10 +13,6 @@ from app import app
 class VercelPathFixer:
     """
     WSGI middleware to restore the original client request path on Vercel.
-    Vercel CLI 62 rewrites route requests using the destination path (/api/index).
-    By rewriting with `?__path=$1` in vercel.json, we extract the original path
-    and set PATH_INFO accordingly so Flask routes correctly for all URLs,
-    static files (CSS/JS), and API endpoints.
     """
     def __init__(self, wsgi_app):
         self.wsgi_app = wsgi_app
@@ -28,7 +24,10 @@ class VercelPathFixer:
         target_path = None
         if "__path" in params:
             raw_path = params.pop("__path")[0]
-            target_path = "/" + raw_path.lstrip("/")
+            if raw_path:
+                target_path = "/" + raw_path.lstrip("/")
+            else:
+                target_path = "/"
             environ["QUERY_STRING"] = urlencode(params, doseq=True)
         else:
             # Fallback to headers if present
@@ -42,8 +41,6 @@ class VercelPathFixer:
 
         if target_path:
             environ["PATH_INFO"] = target_path
-        elif not environ.get("PATH_INFO") or environ.get("PATH_INFO") == "/api/index":
-            environ["PATH_INFO"] = "/"
 
         return self.wsgi_app(environ, start_response)
 
