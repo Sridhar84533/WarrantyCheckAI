@@ -41,6 +41,7 @@ class VercelPathFixer:
 
         if target_path:
             environ["PATH_INFO"] = target_path
+            environ["SCRIPT_NAME"] = ""
 
         return self.wsgi_app(environ, start_response)
 

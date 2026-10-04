@@ -68,6 +68,27 @@ def api_index():
     return render_template("index.html")
 
 
+@app.route("/static/<path:filename>")
+def serve_custom_static(filename):
+    search_dirs = [
+        os.path.join(BASE_DIR, "static"),
+        os.path.join(BASE_DIR, "public", "static"),
+        os.path.join(os.path.dirname(BASE_DIR), "static"),
+        os.path.join(os.path.dirname(BASE_DIR), "public", "static"),
+    ]
+    for d in search_dirs:
+        full_path = os.path.join(d, filename)
+        if os.path.isfile(full_path):
+            response = send_from_directory(os.path.abspath(d), filename)
+            if filename.endswith(".css"):
+                response.headers["Content-Type"] = "text/css; charset=utf-8"
+            elif filename.endswith(".js"):
+                response.headers["Content-Type"] = "application/javascript; charset=utf-8"
+            response.headers["Cache-Control"] = "public, max-age=86400"
+            return response
+    return ("Static asset not found", 404, {"Content-Type": "text/plain"})
+
+
 @app.get("/health")
 def health():
     return jsonify({
@@ -95,6 +116,8 @@ def bad_request(e):
 
 @app.errorhandler(404)
 def not_found(e):
+    if request.path.startswith("/static/"):
+        return ("Static asset not found", 404, {"Content-Type": "text/plain"})
     if request.path in ["/api/index", "/api/index/"]:
         return render_template("index.html")
     # If the user requested an API endpoint that does not exist, return JSON
