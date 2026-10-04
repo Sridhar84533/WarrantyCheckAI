@@ -43,6 +43,7 @@ app.register_blueprint(document_bp)
 
 
 @app.get("/")
+@app.get("/api/index")
 def home():
     return render_template("index.html")
 
@@ -74,6 +75,8 @@ def bad_request(e):
 
 @app.errorhandler(404)
 def not_found(e):
+    if request.path in ["/api/index", "/api/index/"]:
+        return render_template("index.html")
     # If the user requested an API endpoint that does not exist, return JSON
     if request.path.startswith("/api/") or request.path in ["/check-warranty", "/chat", "/upload-document"]:
         return jsonify({
