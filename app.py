@@ -42,13 +42,11 @@ app.register_blueprint(warranty_bp)
 app.register_blueprint(document_bp)
 
 
-@app.get("/")
-def home():
-    return render_template("index.html")
-
-
+@app.route("/", methods=["GET", "POST"])
 @app.route("/api/index", methods=["GET", "POST"])
-def api_index():
+@app.route("/api/index.py", methods=["GET", "POST"])
+@app.route("/api", methods=["GET", "POST"])
+def home():
     if request.method == "POST":
         data = request.get_json(silent=True) or (request.form.to_dict() if request.form else {})
         if "document" in request.files:
@@ -118,16 +116,21 @@ def bad_request(e):
 def not_found(e):
     if request.path.startswith("/static/"):
         return ("Static asset not found", 404, {"Content-Type": "text/plain"})
-    if request.path in ["/api/index", "/api/index/"]:
+
+    clean_path = request.path.rstrip("/")
+    if clean_path in ["", "/api", "/api/index", "/api/index.py"]:
         return render_template("index.html")
-    # If the user requested an API endpoint that does not exist, return JSON
-    if request.path.startswith("/api/") or request.path in ["/check-warranty", "/chat", "/upload-document"]:
+
+    # If the user requested an actual API endpoint that does not exist, return JSON
+    if (request.path.startswith("/api/") and not request.path.startswith("/api/index")) or \
+       request.path in ["/check-warranty", "/chat", "/upload-document"]:
         return jsonify({
             "success": False,
             "error": f"API endpoint not found: {request.path}"
         }), 404
-    # Otherwise render home page or standard response
-    return render_template("index.html"), 404
+
+    # Otherwise render home page
+    return render_template("index.html")
 
 
 @app.errorhandler(405)

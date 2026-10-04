@@ -36,12 +36,13 @@ class VercelPathFixer:
                 or environ.get("HTTP_X_FORWARDED_URI")
                 or environ.get("HTTP_X_MATCHED_PATH")
             )
-            if matched and matched != "/api/index":
+            if matched and matched.rstrip("/").split("?")[0] not in ["/api/index", "/api/index.py"]:
                 target_path = "/" + matched.split("?")[0].lstrip("/")
+            else:
+                target_path = "/"
 
-        if target_path:
-            environ["PATH_INFO"] = target_path
-            environ["SCRIPT_NAME"] = ""
+        environ["PATH_INFO"] = target_path if target_path else "/"
+        environ["SCRIPT_NAME"] = ""
 
         return self.wsgi_app(environ, start_response)
 
